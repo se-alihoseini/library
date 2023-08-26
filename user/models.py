@@ -1,30 +1,25 @@
-import random
-import string
-
 from user.manager import MyUserManager
 
+import random
+import string
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.contrib.auth import login
 from django.shortcuts import get_object_or_404
-from django.core.validators import ValidationError
+
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    STATUS_CHOICES = [
-        ('ac', 'active'),
-        ('da', 'de_active'),
-        ('bl', 'block'),
-        ('de', 'delete'),
-    ]
+
     phone_number = models.CharField(max_length=11, unique=True)
     email = models.EmailField(unique=True)
+    password = models.CharField(blank=True, null=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)
-    image = models.ImageField(upload_to='', blank=True, null=True)
-    status = models.CharField(choices=STATUS_CHOICES, max_length=2, default='da')
-    change_password = models.BooleanField(default=True)
-    is_admin = models.BooleanField(default=False)
+    registry_date = models.DateField(auto_now_add=True)
     is_superuser = models.BooleanField(default=False)
+    subscription_status = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'phone_number'
     REQUIRED_FIELDS = ('email', 'first_name', 'last_name')
@@ -37,27 +32,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_staff(self):
         return self.is_superuser
 
-    def clean(self):
-        try:
-            user = User.objects.get(is_superuser=True)
-        except User.DoesNotExist:
-            user = None
-        if user is not None:
-            raise ValidationError(
-                {'is_superuser': "there is a super user"})
-
-    def check_otp(self, code):
-        try:
-            OtpCode.objects.filter(user=self, code=code)
-            OtpCode.objects.filter(user=self).delete()
-            return True
-        except OtpCode.DoesNotExist:
-            return False
-
-    def generate_password(self):
-        characters = string.ascii_letters + string.digits + string.punctuation
-        password = ''.join(random.choice(characters) for i in range(12))
-        print(password)
+    def user_login(self, request):
+        login(request, request.user)
+        refresh = RefreshToken.for_user(self)
+        access = refresh.access_token
+        return {'refresh': str(refresh), 'access': str(access)}
 
     @classmethod
     def get_user(cls, email_phone):
@@ -67,19 +46,15 @@ class User(AbstractBaseUser, PermissionsMixin):
             user = get_object_or_404(cls, phone_number=email_phone)
         return user
 
-    @classmethod
-    def check_user_pass(self, data):
-        email_phone = data['email_phone']
-        password = data['password']
-        user = User.get_user(email_phone)
-        if user is None:
-            return False
-        else:
-            if user.check_password(password):
-                OtpCode.send_otp(user=self)
-                return True
-            else:
-                return False
+
+class Subscription(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_subscription')
+    is_active = models.BooleanField(default=False)
+    start_date_at = models.DateField(auto_now_add=True)
+    end_date_at = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user}-Subscription'
 
 
 class OtpCode(models.Model):
@@ -89,6 +64,15 @@ class OtpCode(models.Model):
 
     @classmethod
     def send_otp(cls, user):
-        code = ''.join(random.choice(string.digits) for i in range(5))
+        code = ''.join(random.choice(string.digits) for i in range(4))
         OtpCode.objects.create(code=code, user=user)
         print(code)
+
+    @classmethod
+    def check_otp(cls, code, user):
+        otp_code = OtpCode.objects.get(code__exact=code, user=user)
+        if otp_code is not None:
+            OtpCode.objects.filter(user=user).delete()
+            return True
+        else:
+            return False

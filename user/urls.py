@@ -1,10 +1,8 @@
 from django.urls import path
-from user.views import user_pass_authentication, change_password, generate_password
+from user.views import otp_authentication, send_otp
 
 app_name = 'user'
 urlpatterns = [
-    path('authentication/user_pass/', user_pass_authentication.UserPassAuthentication.as_view(),
-         name='user_pass_authentication'),
-    path('generate_password/', generate_password.GeneratePassword.as_view(), name='generate_password'),
-    path('change_password/', change_password.ChangePassword.as_view(), name='change_password'),
+    path('otp/send/', send_otp.SendOtp.as_view(), name='send_otp'),
+    path('authentication/otp/', otp_authentication.OtpAuthentication.as_view(), name='otp_authentication'),
 ]
