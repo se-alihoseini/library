@@ -1,4 +1,4 @@
-from book.views import book_crud, book_list
+from book.views import book_crud
 from django.urls import path
 
 from rest_framework import routers
@@ -6,7 +6,6 @@ from rest_framework import routers
 appname = 'book'
 
 urlpatterns = [
-    path('book/list/', book_list.BookList.as_view(), name='book_list')
 ]
 
 router = routers.SimpleRouter()
