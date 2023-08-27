@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+import pika
+from pymongo import MongoClient
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -89,8 +91,25 @@ DATABASES = {
         "PASSWORD": "q3I5fRK1m0f",
         "HOST": "127.0.0.1",
         "PORT": "5432",
-    }
+    },
+
 }
+MONGO_DB = {
+        'mongo_db': MongoClient('localhost', 27017)['librarydb'],
+}
+
+RABBITMQ_CONFIG = {
+        "host": "localhost",
+        "port": 5672,
+        "username": "ali",
+        "password": "ali",
+        "queue_name": "data_transfer_queue"
+}
+RABBITMQ_CONNECTION = pika.BlockingConnection(pika.ConnectionParameters(
+    host=RABBITMQ_CONFIG['host'],
+    port=RABBITMQ_CONFIG['port'],
+    credentials=pika.PlainCredentials(RABBITMQ_CONFIG['username'], RABBITMQ_CONFIG['password'])
+))
 
 
 # Password validation
@@ -142,7 +161,7 @@ REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
     # or allow read-only access for unauthenticated users.
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly',
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
