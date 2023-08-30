@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_spectacular',
     'rest_framework_simplejwt',
+    'django_ratelimit',
 ]
 
 MIDDLEWARE = [
@@ -118,6 +119,11 @@ REDIS_CONFIG = {
     "port": 6379,
 }
 
+CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

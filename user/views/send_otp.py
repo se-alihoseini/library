@@ -6,11 +6,16 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
+
 
 class SendOtp(APIView):
     serializer_class = EmailPhoneSerializer
     permission_classes = (AllowAny,)
 
+    @method_decorator(ratelimit(key='user', rate='5/2m', method='POST', block=True))
+    @method_decorator(ratelimit(key='user', rate='10/h', method='POST', block=True))
     def post(self, request):
         srz_data = EmailPhoneSerializer(data=request.data)
         if srz_data.is_valid():
