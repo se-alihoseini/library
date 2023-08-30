@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 from user import repositories
 import redis
 from django.contrib.auth import login
@@ -100,7 +98,7 @@ def store_blocked_token(token, user_id):
     r.expireat(f"{token}", exp_date)
 
 
-def send_sms(user_id, token, service_name):
+async def send_sms(user_id, token, service_name):
     service_status = False
     while not service_status:
         if service_name == 'kave_negar':
