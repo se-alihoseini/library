@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 from pathlib import Path
 import pika
 from pymongo import MongoClient
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -56,6 +57,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    'user.middlewares.BlockTokensCheck'
 ]
 
 ROOT_URLCONF = 'library.urls'
@@ -110,6 +113,10 @@ RABBITMQ_CONNECTION = pika.BlockingConnection(pika.ConnectionParameters(
     port=RABBITMQ_CONFIG['port'],
     credentials=pika.PlainCredentials(RABBITMQ_CONFIG['username'], RABBITMQ_CONFIG['password'])
 ))
+REDIS_CONFIG = {
+    "host": "localhost",
+    "port": 6379,
+}
 
 
 # Password validation
@@ -177,4 +184,9 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     # OTHER SETTINGS
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
