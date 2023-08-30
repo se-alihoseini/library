@@ -1,5 +1,6 @@
 from user.serializer import EmailPhoneSerializer
 from user.models import User, OtpCode
+from user import services
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -20,7 +21,8 @@ class SendOtp(APIView):
         srz_data = EmailPhoneSerializer(data=request.data)
         if srz_data.is_valid():
             email_phone = srz_data.validated_data['email_phone']
-            user = User.get_user(email_phone)
-            OtpCode.send_otp(user)
+            user = services.get_user(email_phone)
+            code = OtpCode.create_otp(user)
+            services.send_sms(user_id=user.id, token=code, service_name='kave_negar')
             return Response(data='otp was sent', status=status.HTTP_200_OK)
         return Response(data='validation error', status=status.HTTP_400_BAD_REQUEST)

@@ -8,6 +8,10 @@ import jwt
 from library import settings
 
 
+def get_user(user_id):
+    return repositories.get_user(user_id)
+
+
 def payment_service(amount, user_id):
     user = repositories.get_user(user_id)
     # data = {
@@ -80,10 +84,6 @@ def user_login(request, user):
     return {'refresh': str(refresh), 'access': str(access)}
 
 
-def send_sms(user_id, token, service_name):
-    pass
-
-
 def create_otp():
     pass
 
@@ -98,3 +98,65 @@ def store_blocked_token(token, user_id):
     decoded_data = jwt.decode(jwt=token, key=settings.SECRET_KEY, algorithms=["HS256"])
     exp_date = decoded_data['exp']
     r.expireat(f"{token}", exp_date)
+
+
+def send_sms(user_id, token, service_name):
+    service_status = False
+    while not service_status:
+        if service_name == 'kave_negar':
+            try:
+                service_status = kave_negar(user_id, token)
+            except:
+                service_status = signal(user_id, token)
+        else:
+            try:
+                service_status = signal(user_id, token)
+            except:
+                service_status = kave_negar(user_id, token)
+
+
+def kave_negar(user_id, token):
+    r = redis.Redis(host=settings.REDIS_CONFIG["host"], port=settings.REDIS_CONFIG["port"])
+    block_check = r.exists("kave_negar_block")
+    half_open_check = r.exists("kave_negar_half_open")
+
+    if block_check:
+        return False
+    elif half_open_check:
+        try:
+            print(f'kave_negar : {token} to {user_id}')
+            r.delete('kave_negar_half_open')
+            return True
+        except:
+            return False
+    else:
+        try:
+            print(f'kave negar : {token} to {user_id}')
+            return True
+        except:
+            r.setex('kave_negar_block', 60, '')
+            r.set('kave_negar_half_open', '')
+            return False
+
+
+def signal(user_id, token):
+    r = redis.Redis(host=settings.REDIS_CONFIG["host"], port=settings.REDIS_CONFIG["port"])
+    block_check = r.exists("signal_block")
+    half_open_check = r.exists("signal_half_open")
+
+    if block_check:
+        return False
+    elif half_open_check:
+        try:
+            print(f'signal : {token} to {user_id}')
+            r.delete('signal_half_open')
+        except:
+            return False
+    else:
+        try:
+            print(f'signal : {token} to {user_id}')
+            return True
+        except:
+            r.setex('signal_block', 60, '')
+            r.set('signal_half_open', '')
+            return False

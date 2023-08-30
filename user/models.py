@@ -32,14 +32,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_staff(self):
         return self.is_superuser
 
-    @classmethod
-    def get_user(cls, email_phone):
-        if '@' in email_phone:
-            user = get_object_or_404(cls, email=email_phone)
-        else:
-            user = get_object_or_404(cls, phone_number=email_phone)
-        return user
-
 
 class Subscription(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_subscription')
@@ -57,7 +49,7 @@ class OtpCode(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     @classmethod
-    def send_otp(cls, user):
+    def create_otp(cls, user):
         code = ''.join(random.choice(string.digits) for i in range(4))
         OtpCode.objects.create(code=code, user=user)
         print(code)
