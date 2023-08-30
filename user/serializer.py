@@ -7,4 +7,4 @@ class EmailPhoneSerializer(serializers.Serializer):
 
 class OtpAuthSerializer(serializers.Serializer):
     email_phone = serializers.CharField()
-    code = serializers.IntegerField()
+    code = serializers.CharField()

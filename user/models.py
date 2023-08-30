@@ -32,12 +32,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_staff(self):
         return self.is_superuser
 
-    def user_login(self, request):
-        login(request, request.user)
-        refresh = RefreshToken.for_user(self)
-        access = refresh.access_token
-        return {'refresh': str(refresh), 'access': str(access)}
-
     @classmethod
     def get_user(cls, email_phone):
         if '@' in email_phone:
@@ -70,7 +64,7 @@ class OtpCode(models.Model):
 
     @classmethod
     def check_otp(cls, code, user):
-        otp_code = OtpCode.objects.get(code__exact=code, user=user)
+        otp_code = OtpCode.objects.get(code=code, user=user)
         if otp_code is not None:
             OtpCode.objects.filter(user=user).delete()
             return True

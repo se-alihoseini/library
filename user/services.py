@@ -1,4 +1,11 @@
+from datetime import datetime, timedelta
+
 from user import repositories
+import redis
+from django.contrib.auth import login
+from rest_framework_simplejwt.tokens import RefreshToken
+import jwt
+from library import settings
 
 
 def payment_service(amount, user_id):
@@ -66,6 +73,13 @@ def buy_subscription(user_id, transaction_code):
         return True
 
 
+def user_login(request, user):
+    login(request, user)
+    refresh = RefreshToken.for_user(user)
+    access = refresh.access_token
+    return {'refresh': str(refresh), 'access': str(access)}
+
+
 def send_sms(user_id, token, service_name):
     pass
 
@@ -76,3 +90,11 @@ def create_otp():
 
 def delete_expired_otp():
     pass
+
+
+def store_blocked_token(token, user_id):
+    r = redis.Redis(host=settings.REDIS_CONFIG["host"], port=settings.REDIS_CONFIG["port"])
+    r.set(f"{token}", f"{user_id}")
+    decoded_data = jwt.decode(jwt=token, key=settings.SECRET_KEY, algorithms=["HS256"])
+    exp_date = decoded_data['exp']
+    r.expireat(f"{token}", exp_date)
