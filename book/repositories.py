@@ -1,9 +1,13 @@
-from django.shortcuts import get_object_or_404
-
 from book.models import Book
 from book.serializer import BookSerializer
+from book.models import Reservation
 from book.book_transfer import producer_node, consumer_node
 from library import settings
+
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError
+import datetime
 
 
 def get_all_books(page, query_filter, query_sort, min_price_query, max_price_query, int_genre, int_city):
@@ -75,3 +79,34 @@ def create_book(title, description, publication_date, isbn, price, author, genre
     except:
         book.delete()
     return book
+
+
+def create_reservation(book, user, days, cost):
+    now = datetime.date.today()
+    first_book_version = book.version
+    end_data = now + datetime.timedelta(days)
+    reservation = Reservation.objects.create(book=book, user=user, end_date=end_data, cost=cost)
+    new_book_version = book.version + 1
+    if book.version == new_book_version:
+        reservation.delete()
+        raise ValidationError('reserve days cannot more than 14 days')
+    else:
+        book.version = new_book_version
+        book.save()
+    return reservation
+
+
+def get_3_month_user_books_count(user):
+    current_date = datetime.now()
+    three_months_ago = current_date - datetime.timedelta(days=90)
+    return Reservation.objects.filter(user=user, start_date__gte=three_months_ago).count()
+
+
+def get_2_month_user_books_cost(user):
+    current_date = datetime.now()
+    three_months_ago = current_date - datetime.timedelta(days=60)
+    return Reservation.objects.filter(user=user, start_date__gte=three_months_ago).aggregate(total=Sum('cost'))
+
+
+def get_book_reserved_list(user):
+    return Book.objects.filter(books_reserved__user_id=user.id)
