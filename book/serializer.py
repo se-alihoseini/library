@@ -20,3 +20,10 @@ class BookListSerializer(serializers.ModelSerializer):
         model = Book
         fields = ('title', 'price')
 
+
+class BookReserveSerializer(serializers.ModelSerializer):
+    days = serializers.IntegerField()
+
+    class Meta:
+        model = Book
+        fields = ('days', 'book')
