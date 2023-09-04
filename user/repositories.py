@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from wtforms import ValidationError
 
 from user.models import User, Subscription, Transaction
 from book.serializer import BookSerializer
@@ -7,12 +8,28 @@ from library import settings
 from datetime import datetime, timedelta
 
 
-def get_user(user_id):
+def get_user(phone_or_email):
+    if '@' in phone_or_email:
+        try:
+            user = User.objects.get(email=phone_or_email)
+            return user
+        except user.DoesNotExist:
+            return None
+    else:
+        try:
+            user = User.objects.get(phone_number=phone_or_email)
+            return user
+        except User.DoesNotExist:
+            return None
+
+
+def get_user_by_id(user_id):
     try:
         user = User.objects.get(id=user_id)
         return user
     except User.DoesNotExist:
-        raise 'user not found'
+        raise ValueError('user does not exist')
+
 
 
 def set_subscription_for_user(user_id):

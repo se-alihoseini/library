@@ -1,9 +1,12 @@
+import random
+
 from user import repositories
 import redis
 from django.contrib.auth import login
 from rest_framework_simplejwt.tokens import RefreshToken
 import jwt
 from library import settings
+import requests
 
 
 def get_user(user_id):
@@ -98,63 +101,62 @@ def store_blocked_token(token, user_id):
     r.expireat(f"{token}", exp_date)
 
 
-async def send_sms(user_id, token, service_name):
+async def send_sms(user_id, token):
     service_status = False
     while not service_status:
-        if service_name == 'kave_negar':
-            try:
-                service_status = kave_negar(user_id, token)
-            except:
-                service_status = signal(user_id, token)
-        else:
-            try:
-                service_status = signal(user_id, token)
-            except:
-                service_status = kave_negar(user_id, token)
+        r = redis.Redis(host=settings.REDIS_CONFIG["host"], port=settings.REDIS_CONFIG["port"])
+        keys = r.keys('sms_service:*')
+        values = r.mget(keys)
+        values_list = list(values)
+
+        key_count = len(keys)
+        number = random.randint(1, key_count)-1
+        method = eval(values_list[number].decode('utf-8'))
+        service_status = method(user_id, token)
 
 
-def kave_negar(user_id, token):
+def create_sms_service_in_redis(service_name, service_method):
+    r = redis.Redis(host=settings.REDIS_CONFIG["host"], port=settings.REDIS_CONFIG["port"])
+    r.set(f'sms_service:{service_name}', f'{service_method}')
+    r.set(f'sms_service_error:{service_name}', '0')
+
+
+def kave_negar_service(user_id, token):
     r = redis.Redis(host=settings.REDIS_CONFIG["host"], port=settings.REDIS_CONFIG["port"])
     block_check = r.exists("kave_negar_block")
-    half_open_check = r.exists("kave_negar_half_open")
 
-    if block_check:
+    if block_check == 1:
+        value = r.get('kave_negar_block')
         return False
-    elif half_open_check:
-        try:
-            print(f'kave_negar : {token} to {user_id}')
-            r.delete('kave_negar_half_open')
-            return True
-        except:
-            return False
     else:
-        try:
+        # sms_service_response = requests.post(url='', data='')
+        sms_service_response = 200
+        if sms_service_response == 200:
             print(f'kave negar : {token} to {user_id}')
             return True
-        except:
-            r.setex('kave_negar_block', 60, '')
-            r.set('kave_negar_half_open', '')
-            return False
+        else:
+            num = r.incr('sms_service_error:kave_negar')
+            if num >= 3:
+                r.setex('kave_negar_block', '1800', '')
+                r.set('sms_service_error:kave_negar', '0')
+                return False
 
 
-def signal(user_id, token):
+def signal_service(user_id, token):
     r = redis.Redis(host=settings.REDIS_CONFIG["host"], port=settings.REDIS_CONFIG["port"])
     block_check = r.exists("signal_block")
-    half_open_check = r.exists("signal_half_open")
 
-    if block_check:
+    if block_check == 1:
         return False
-    elif half_open_check:
-        try:
-            print(f'signal : {token} to {user_id}')
-            r.delete('signal_half_open')
-        except:
-            return False
     else:
-        try:
+        # sms_service_response = requests.post(url='', data='')
+        sms_service_response = 20
+        if sms_service_response == 200:
             print(f'signal : {token} to {user_id}')
             return True
-        except:
-            r.setex('signal_block', 60, '')
-            r.set('signal_half_open', '')
-            return False
+        else:
+            num = r.incr('sms_service_error:signal')
+            if num >= 3:
+                r.setex('signal_block', '1800', '')
+                r.set('sms_service_error:signal', '0')
+                return False

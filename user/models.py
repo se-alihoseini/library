@@ -51,8 +51,8 @@ class OtpCode(models.Model):
     @classmethod
     def create_otp(cls, user):
         code = ''.join(random.choice(string.digits) for i in range(4))
-        OtpCode.objects.create(code=code, user=user)
-        print(code)
+        code_obj = OtpCode.objects.create(code=code, user=user)
+        return code_obj
 
     @classmethod
     def check_otp(cls, code, user):
